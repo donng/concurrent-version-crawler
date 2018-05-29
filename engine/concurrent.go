@@ -1,6 +1,9 @@
 package engine
 
-import "log"
+import (
+	"log"
+	"crawler/concurrent-version-crawler/model"
+)
 
 type ConcurrentEngine struct {
 	Scheduler   Scheduler
@@ -35,20 +38,32 @@ func (e *ConcurrentEngine) Run(seeds ...Request) {
 
 	// 提交 request
 	for _, r := range seeds {
+		// 判断 url 是否存在
+		if isDuplicate(r.Url) {
+			// log.Printf("Duplicate request %s", r.Url)
+			continue
+		}
 		e.Scheduler.Submit(r)
 	}
 
-	itemCount := 0
+	profileCount := 0
 	for {
 		result := <-out
 		// 打印 Items 结果
 		for _, item := range result.Items {
-			log.Printf("Got item #%d: %v",itemCount, item)
-			itemCount++
+			if _, ok := item.(model.Profile); ok {
+				log.Printf("Got profile #%d: %v",profileCount, item)
+				profileCount++
+			}
 		}
 
 		// 新的 request 提交到 scheduler
 		for _, request := range result.Requests {
+			// 判断 url 是否存在
+			if isDuplicate(request.Url) {
+				// log.Printf("Duplicate request %s", request.Url)
+				continue
+			}
 			e.Scheduler.Submit(request)
 		}
 	}
@@ -72,4 +87,15 @@ func createWorker(in chan Request, out chan ParseResult, ready ReadyNotifier) {
 			out <- result
 		}
 	}()
+}
+
+var visitedUrls =  make(map[string]bool)
+
+func isDuplicate(url string) bool  {
+	if visitedUrls[url] {
+		return true
+	}
+
+	visitedUrls[url] = true
+	return false
 }
