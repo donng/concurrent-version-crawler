@@ -26,7 +26,7 @@ func ItemSaver(index string) (chan engine.Item, error) {
 			log.Printf("Item Saver : got item # %d: %v", itemCount, item)
 			itemCount++
 
-			err := save(client, item, index)
+			err := Save(client, item, index)
 			if err != nil {
 				log.Printf("Item Saver: error saving item %v: %v", item, err)
 			}
@@ -37,7 +37,7 @@ func ItemSaver(index string) (chan engine.Item, error) {
 }
 
 // 保存用户信息，返回存储成功的 ID
-func save(client *elastic.Client, item engine.Item, index string) (err error) {
+func Save(client *elastic.Client, item engine.Item, index string) (err error) {
 
 	if item.Type == "" {
 		return errors.New("Must supply Type")
