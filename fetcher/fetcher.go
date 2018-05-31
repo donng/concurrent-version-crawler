@@ -10,6 +10,7 @@ import (
 	"golang.org/x/text/encoding"
 	"golang.org/x/net/html/charset"
 	"time"
+	"fmt"
 )
 
 var rateLimiter = time.Tick(10 * time.Millisecond)
@@ -22,16 +23,18 @@ func Fetch(url string) ([]byte, error) {
 	}
 	defer resp.Body.Close()
 
+	// 判断返回状态码
+	if resp.StatusCode != http.StatusOK {
+		log.Printf("Fetcher: error response %d", resp.StatusCode)
+		return nil, fmt.Errorf("wrong status code :%d", resp.StatusCode)
+	}
+
+
 	// 判断响应编码
 	newReader := bufio.NewReader(resp.Body)
 	encoding := determineEncoding(newReader)
 	// 转换编码格式
 	utf8Reader := transform.NewReader(newReader, encoding.NewDecoder())
-
-	// 判断返回状态码
-	if resp.StatusCode != http.StatusOK {
-		log.Printf("Fetcher: error response %s", resp.StatusCode)
-	}
 
 	// resp.Body 实现了 io.Reader 和 io.Closer interface
 	return ioutil.ReadAll(utf8Reader)

@@ -1,13 +1,9 @@
 package engine
 
-import (
-	"log"
-	"crawler/concurrent-version-crawler/model"
-)
-
 type ConcurrentEngine struct {
 	Scheduler   Scheduler
 	WorkerCount int
+	ItemChan    chan Item
 }
 
 type Scheduler interface {
@@ -46,15 +42,11 @@ func (e *ConcurrentEngine) Run(seeds ...Request) {
 		e.Scheduler.Submit(r)
 	}
 
-	profileCount := 0
 	for {
 		result := <-out
-		// 打印 Items 结果
+		// 向 itemsaver 发送 items
 		for _, item := range result.Items {
-			if _, ok := item.(model.Profile); ok {
-				log.Printf("Got profile #%d: %v",profileCount, item)
-				profileCount++
-			}
+			go func() { e.ItemChan <- item }()
 		}
 
 		// 新的 request 提交到 scheduler
@@ -89,9 +81,9 @@ func createWorker(in chan Request, out chan ParseResult, ready ReadyNotifier) {
 	}()
 }
 
-var visitedUrls =  make(map[string]bool)
+var visitedUrls = make(map[string]bool)
 
-func isDuplicate(url string) bool  {
+func isDuplicate(url string) bool {
 	if visitedUrls[url] {
 		return true
 	}
