@@ -8,7 +8,16 @@ import (
 	"github.com/kataras/iris/core/errors"
 )
 
-func ItemSaver() chan engine.Item {
+// 1. 连接 elasticsearch
+// 2. goroutine 开启死循环， 接收 channel 传送过来的 Item,并存储
+// 3. 返回接收 Item 的 channel
+func ItemSaver(index string) (chan engine.Item, error) {
+
+	client, err := elastic.NewClient(elastic.SetSniff(false))
+	if err != nil {
+		return nil, err
+	}
+
 	out := make(chan engine.Item)
 	go func() {
 		itemCount := 0
@@ -17,26 +26,18 @@ func ItemSaver() chan engine.Item {
 			log.Printf("Item Saver : got item # %d: %v", itemCount, item)
 			itemCount++
 
-			err := save(item)
+			err := save(client, item, index)
 			if err != nil {
 				log.Printf("Item Saver: error saving item %v: %v", item, err)
 			}
 		}
 	}()
 
-	return out
+	return out, nil
 }
 
 // 保存用户信息，返回存储成功的 ID
-func save(item engine.Item) (err error) {
-	client, e := elastic.NewClient(
-		// must turn off sniff in docker
-		elastic.SetSniff(false),
-	)
-
-	if e != nil {
-		panic(e)
-	}
+func save(client *elastic.Client, item engine.Item, index string) (err error) {
 
 	if item.Type == "" {
 		return errors.New("Must supply Type")
@@ -45,7 +46,7 @@ func save(item engine.Item) (err error) {
 	// 第一个 Index 指创建
 
 	indexService := client.Index().
-		Index("dating_profile").
+		Index(index).
 		Type(item.Type).
 		BodyJson(item)
 	if item.Id != "" {

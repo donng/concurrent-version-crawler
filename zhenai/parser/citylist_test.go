@@ -11,6 +11,7 @@ func TestParseCityList(t *testing.T) {
 		panic(e)
 	}
 
+
 	result := ParseCityList(bytes)
 
 	const cityNum = 470

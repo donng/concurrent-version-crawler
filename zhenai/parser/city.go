@@ -8,20 +8,16 @@ import (
 var profileRe = regexp.MustCompile(`<a href="(http://album.zhenai.com/u/[\d]+)"[^>]*>([^<]+)</a>`)
 var cityUrlRe = regexp.MustCompile(`href="(http://www.zhenai.com/zhenghun/[^"]+)"`)
 
-func ParseCity(content []byte) engine.ParseResult {
+func ParseCity(content []byte, _ string) engine.ParseResult {
 	matches := profileRe.FindAllSubmatch(content, -1)
 
 	result := engine.ParseResult{}
 	for _, m := range matches {
-		name := string(m[2])
-		url := string(m[1])
 		result.Requests = append(
 			result.Requests, engine.Request{
-				Url: url,
+				Url: string(m[1]),
 				// 注意： 闭包用法
-				ParserFunc: func(bytes []byte) engine.ParseResult {
-					return ParseProfile(bytes, url, name)
-				},
+				ParserFunc: ProfileParser(string(m[2])),
 			},
 		)
 	}
